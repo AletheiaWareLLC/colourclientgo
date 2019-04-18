@@ -17,18 +17,13 @@
 package main
 
 import (
-	//"bytes"
-	//"crypto/rsa"
 	"encoding/base64"
-	"fmt"
 	"github.com/AletheiaWareLLC/aliasgo"
 	"github.com/AletheiaWareLLC/bcgo"
 	"github.com/AletheiaWareLLC/colourgo"
 	"github.com/AletheiaWareLLC/financego"
-	//"github.com/golang/protobuf/proto"
 	"log"
 	"os"
-	"time"
 )
 
 func main() {
@@ -74,7 +69,7 @@ func main() {
 				log.Println(err)
 				return
 			}
-			canvases, err := bcgo.OpenAndSyncChannel(colourgo.COLOUR_PREFIX_CANVAS + GetYear())
+			canvases, err := bcgo.OpenAndSyncChannel(colourgo.COLOUR_PREFIX_CANVAS + colourgo.GetYear())
 			if err != nil {
 				log.Println(err)
 				return
@@ -104,7 +99,7 @@ func main() {
 					log.Println(err)
 					return
 				}
-				canvases, err := bcgo.OpenAndSyncChannel(colourgo.COLOUR_PREFIX_CANVAS + GetYear())
+				canvases, err := bcgo.OpenAndSyncChannel(colourgo.COLOUR_PREFIX_CANVAS + colourgo.GetYear())
 				if err != nil {
 					log.Println(err)
 					return
@@ -127,7 +122,7 @@ func main() {
 					log.Println(err)
 					return
 				}
-				canvases, err := bcgo.OpenAndSyncChannel(colourgo.COLOUR_PREFIX_CANVAS + GetYear())
+				canvases, err := bcgo.OpenAndSyncChannel(colourgo.COLOUR_PREFIX_CANVAS + colourgo.GetYear())
 				if err != nil {
 					log.Println(err)
 					return
@@ -160,20 +155,24 @@ func main() {
 				log.Println(err)
 				return
 			}
+			// Get Customer for Alias
 			customer, err := financego.GetCustomerSync(customers, node.Alias, node.Key, node.Alias)
 			if err != nil {
+				log.Println(err)
+			}
+
+			if customer == nil {
 				publicKeyBytes, err := bcgo.RSAPublicKeyToPKIXBytes(&node.Key.PublicKey)
 				if err != nil {
 					log.Println(err)
 					return
 				}
-				log.Println(err)
-				log.Println("To register as a Colour customer, visit", colourgo.GetColourWebsite()+"/colour-register?alias="+node.Alias)
+				log.Println("Register as a Colour customer, visit", colourgo.GetColourWebsite()+"/colour-register?alias="+node.Alias)
 				log.Println("and enter your alias, email, payment info, and public key:")
 				log.Println(base64.RawURLEncoding.EncodeToString(publicKeyBytes))
-				return
+			} else {
+				log.Println(customer)
 			}
-			log.Println(customer)
 		case "subscription":
 			node, err := bcgo.GetNode()
 			if err != nil {
@@ -185,10 +184,14 @@ func main() {
 				log.Println(err)
 				return
 			}
+			// Get Subscription for Alias
 			subscription, err := financego.GetSubscriptionSync(subscriptions, node.Alias, node.Key, node.Alias)
 			if err != nil {
 				log.Println(err)
-				log.Println("To subscribe for purchase market and voting platform, visit", colourgo.GetColourWebsite()+"/colour-subscribe?alias="+node.Alias)
+			}
+
+			if subscription == nil {
+				log.Println("Subscribe for purchase market and voting platform, visit", colourgo.GetColourWebsite()+"/colour-subscribe?alias="+node.Alias)
 				log.Println("and enter your alias, and customer ID")
 			} else {
 				log.Println(subscription)
@@ -207,9 +210,6 @@ func PrintUsage() {
 	log.Println("Colour Usage:")
 	log.Println("\tcolour - display usage")
 	log.Println("\tcolour init - initializes environment, generates key pair, and registers alias")
-	log.Println("\tcolour list - initializes environment, generates key pair, and registers alias")
-	log.Println("\tcolour show - initializes environment, generates key pair, and registers alias")
-	log.Println("\tcolour showall - initializes environment, generates key pair, and registers alias")
 	log.Println("\tcolour list - displays all canvases")
 	log.Println("\tcolour show [hash] - display metadata of canvas with given hash")
 	log.Println("\tcolour showall [type] - display metadata of all canvases with given mode")
@@ -237,10 +237,6 @@ func PrintUsage() {
 	log.Println("\tbc add-peer [host] - adds the given host to the list of peers")
 
 	log.Println("\tbc random - generate a random number")
-}
-
-func GetYear() string {
-	return fmt.Sprintf("%d", time.Now().Year())
 }
 
 func ShowCanvasShort(entry *bcgo.BlockEntry, canvas *colourgo.Canvas) error {
