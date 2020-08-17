@@ -17,16 +17,10 @@
 package colourclientgo
 
 import (
-	"encoding/base64"
-	"fmt"
-	"github.com/AletheiaWareLLC/aliasgo"
 	"github.com/AletheiaWareLLC/bcclientgo"
 	"github.com/AletheiaWareLLC/bcgo"
 	"github.com/AletheiaWareLLC/colourgo"
-	"github.com/AletheiaWareLLC/cryptogo"
-	"io"
 	"log"
-	"os"
 )
 
 type CanvasCallback func(entry *bcgo.BlockEntry, canvas *colourgo.Canvas) error
