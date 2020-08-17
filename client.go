@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package main
+package colourclientgo
 
 import (
 	"encoding/base64"
 	"fmt"
 	"github.com/AletheiaWareLLC/aliasgo"
+	"github.com/AletheiaWareLLC/bcclientgo"
 	"github.com/AletheiaWareLLC/bcgo"
 	"github.com/AletheiaWareLLC/colourgo"
+	"github.com/AletheiaWareLLC/cryptogo"
 	"io"
 	"log"
 	"os"
@@ -30,42 +32,15 @@ import (
 type CanvasCallback func(entry *bcgo.BlockEntry, canvas *colourgo.Canvas) error
 
 type Client struct {
-	Root    string
-	Cache   bcgo.Cache
-	Network bcgo.Network
-}
-
-func (c *Client) Init(listener bcgo.MiningListener) (*bcgo.Node, error) {
-	// Add Colour host to peers
-	if err := bcgo.AddPeer(c.Root, colourgo.GetColourHost()); err != nil {
-		return nil, err
-	}
-
-	// Add BC host to peers
-	if err := bcgo.AddPeer(c.Root, bcgo.GetBCHost()); err != nil {
-		return nil, err
-	}
-
-	// Create Node
-	node, err := bcgo.GetNode(c.Root, c.Cache, c.Network)
-	if err != nil {
-		return nil, err
-	}
-
-	// Register Alias
-	if err := aliasgo.Register(node, listener); err != nil {
-		return nil, err
-	}
-
-	return node, nil
+	bcclientgo.BCClient
 }
 
 func (c *Client) List(node *bcgo.Node, callback CanvasCallback) error {
 	canvases := colourgo.OpenCanvasChannel()
-	if err := bcgo.LoadHead(canvases, c.Cache, c.Network); err != nil {
+	if err := canvases.LoadHead(c.Cache, c.Network); err != nil {
 		log.Println(err)
 	}
-	if err := bcgo.Pull(canvases, c.Cache, c.Network); err != nil {
+	if err := canvases.Pull(c.Cache, c.Network); err != nil {
 		log.Println(err)
 	}
 	return colourgo.GetCanvas(canvases, c.Cache, c.Network, node.Alias, node.Key, nil, func(entry *bcgo.BlockEntry, key []byte, canvas *colourgo.Canvas) error {
@@ -75,10 +50,10 @@ func (c *Client) List(node *bcgo.Node, callback CanvasCallback) error {
 
 func (c *Client) Show(node *bcgo.Node, recordHash []byte, callback CanvasCallback) error {
 	canvases := colourgo.OpenCanvasChannel()
-	if err := bcgo.LoadHead(canvases, c.Cache, c.Network); err != nil {
+	if err := canvases.LoadHead(c.Cache, c.Network); err != nil {
 		log.Println(err)
 	}
-	if err := bcgo.Pull(canvases, c.Cache, c.Network); err != nil {
+	if err := canvases.Pull(c.Cache, c.Network); err != nil {
 		log.Println(err)
 	}
 	return colourgo.GetCanvas(canvases, c.Cache, c.Network, node.Alias, node.Key, recordHash, func(entry *bcgo.BlockEntry, key []byte, canvas *colourgo.Canvas) error {
@@ -88,10 +63,10 @@ func (c *Client) Show(node *bcgo.Node, recordHash []byte, callback CanvasCallbac
 
 func (c *Client) ShowAll(node *bcgo.Node, mode string, callback CanvasCallback) error {
 	canvases := colourgo.OpenCanvasChannel()
-	if err := bcgo.LoadHead(canvases, c.Cache, c.Network); err != nil {
+	if err := canvases.LoadHead(c.Cache, c.Network); err != nil {
 		log.Println(err)
 	}
-	if err := bcgo.Pull(canvases, c.Cache, c.Network); err != nil {
+	if err := canvases.Pull(c.Cache, c.Network); err != nil {
 		log.Println(err)
 	}
 	return colourgo.GetCanvas(canvases, c.Cache, c.Network, node.Alias, node.Key, nil, func(entry *bcgo.BlockEntry, key []byte, canvas *colourgo.Canvas) error {
@@ -101,171 +76,4 @@ func (c *Client) ShowAll(node *bcgo.Node, mode string, callback CanvasCallback) 
 		}
 		return nil
 	})
-}
-
-func (c *Client) Handle(args []string) {
-	if len(args) > 0 {
-		switch args[0] {
-		case "init":
-			PrintLegalese(os.Stdout)
-			node, err := c.Init(&bcgo.PrintingMiningListener{os.Stdout})
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			log.Println("Initialized")
-			log.Println(node.Alias)
-			publicKeyBytes, err := bcgo.RSAPublicKeyToPKIXBytes(&node.Key.PublicKey)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			log.Println(base64.RawURLEncoding.EncodeToString(publicKeyBytes))
-		case "list":
-			node, err := bcgo.GetNode(c.Root, c.Cache, c.Network)
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			log.Println("Canvases:")
-			count := 0
-			if err := c.List(node, func(entry *bcgo.BlockEntry, canvas *colourgo.Canvas) error {
-				count += 1
-				return PrintCanvasShort(os.Stdout, entry, canvas)
-			}); err != nil {
-				log.Println(err)
-				return
-			}
-			log.Println(count, "canvases")
-		case "show":
-			if len(args) > 1 {
-				node, err := bcgo.GetNode(c.Root, c.Cache, c.Network)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				recordHash, err := base64.RawURLEncoding.DecodeString(args[1])
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				if err := c.Show(node, recordHash, func(entry *bcgo.BlockEntry, canvas *colourgo.Canvas) error {
-					return PrintCanvasLong(os.Stdout, entry, canvas)
-				}); err != nil {
-					log.Println(err)
-					return
-				}
-			} else {
-				log.Println("show <canvas-hash>")
-			}
-		case "showall":
-			if len(args) > 1 {
-				node, err := bcgo.GetNode(c.Root, c.Cache, c.Network)
-				if err != nil {
-					log.Println(err)
-					return
-				}
-				log.Println("Canvases:")
-				count := 0
-				if c.ShowAll(node, args[1], func(entry *bcgo.BlockEntry, canvas *colourgo.Canvas) error {
-					count += 1
-					return PrintCanvasShort(os.Stdout, entry, canvas)
-				}); err != nil {
-					log.Println(err)
-					return
-				}
-				log.Println(count, "canvases")
-			} else {
-				log.Println("showall <mode>")
-			}
-		default:
-			log.Println("Cannot handle", args[0])
-		}
-	} else {
-		PrintUsage(os.Stdout)
-	}
-}
-
-func PrintUsage(output io.Writer) {
-	fmt.Fprintln(output, "Colour Usage:")
-	fmt.Fprintln(output, "\tcolour - print usage")
-	fmt.Fprintln(output, "\tcolour init - initializes environment, generates key pair, and registers alias")
-	fmt.Fprintln(output)
-	fmt.Fprintln(output, "\tcolour list - displays all canvases")
-	fmt.Fprintln(output, "\tcolour show [hash] - display metadata of canvas with given hash")
-	fmt.Fprintln(output, "\tcolour showall [mode] - display metadata of all canvases with given mode")
-	// TODO fmt.Fprintln(output, "\tcolour render [hash] - displays a rendering of the canvas with given hash")
-	fmt.Fprintln(output)
-	fmt.Fprintln(output, "\tcolour purchase [canvas] [location] [colour] [price] - creates a new purchase on the given canvas at the given location for the given colour with the given price")
-	fmt.Fprintln(output, "\tcolour vote [canvas] [location] [colour] - creates a new vote on the given canvas at the given location for the given colour")
-}
-
-func PrintLegalese(output io.Writer) {
-	fmt.Fprintln(output, "Colour Legalese:")
-	fmt.Fprintln(output, "Colour is made available by Aletheia Ware LLC [https://aletheiaware.com] under the Terms of Service [https://aletheiaware.com/terms-of-service.html] and Privacy Policy [https://aletheiaware.com/privacy-policy.html].")
-	fmt.Fprintln(output, "This beta version of Colour is made available under the Beta Test Agreement [https://aletheiaware.com/colour-beta-test-agreement.html].")
-	fmt.Fprintln(output, "By continuing to use this software you agree to the Terms of Service, Privacy Policy, and Beta Test Agreement.")
-}
-
-func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-
-	// Get root directory
-	rootDir, err := bcgo.GetRootDirectory()
-	if err != nil {
-		log.Fatal("Could not get root directory:", err)
-	}
-	log.Println("Root Directory:", rootDir)
-
-	// Get cache directory
-	cacheDir, err := bcgo.GetCacheDirectory(rootDir)
-	if err != nil {
-		log.Fatal("Could not get cache directory:", err)
-	}
-	log.Println("Cache Directory:", cacheDir)
-
-	// Create file cache
-	cache, err := bcgo.NewFileCache(cacheDir)
-	if err != nil {
-		log.Fatal("Could not create file cache:", err)
-	}
-
-	// Get peers
-	peers, err := bcgo.GetPeers(rootDir)
-	if err != nil {
-		log.Fatal("Could not get network peers:", err)
-	}
-
-	// Create network of peers
-	network := &bcgo.TcpNetwork{peers}
-
-	client := &Client{
-		Root:    rootDir,
-		Cache:   cache,
-		Network: network,
-	}
-
-	client.Handle(os.Args[1:])
-}
-
-func PrintCanvasShort(output io.Writer, entry *bcgo.BlockEntry, canvas *colourgo.Canvas) error {
-	hash := base64.RawURLEncoding.EncodeToString(entry.RecordHash)
-	timestamp := bcgo.TimestampToString(entry.Record.Timestamp)
-	fmt.Fprintf(output, "%s %s %s %d %d %d %s", hash, timestamp, canvas.Name, canvas.Width, canvas.Height, canvas.Depth, canvas.Mode)
-	return nil
-}
-
-func PrintCanvasLong(output io.Writer, entry *bcgo.BlockEntry, canvas *colourgo.Canvas) error {
-	fmt.Fprintf(output, "Hash: %s", base64.RawURLEncoding.EncodeToString(entry.RecordHash))
-	fmt.Fprintf(output, "Timestamp: %s", bcgo.TimestampToString(entry.Record.Timestamp))
-	fmt.Fprintf(output, "Name: %s", canvas.Name)
-	fmt.Fprintf(output, "Width: %d", canvas.Width)
-	fmt.Fprintf(output, "Height: %d", canvas.Height)
-	fmt.Fprintf(output, "Depth: %d", canvas.Depth)
-	fmt.Fprintf(output, "Mode: %s", canvas.Mode)
-	fmt.Fprintf(output, "References: %d", len(entry.Record.Reference))
-	for index, reference := range entry.Record.Reference {
-		fmt.Fprintf(output, "\t%d: %s", index, base64.RawURLEncoding.EncodeToString(reference.RecordHash))
-	}
-	return nil
 }
