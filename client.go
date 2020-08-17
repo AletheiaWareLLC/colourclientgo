@@ -107,7 +107,8 @@ func (c *Client) Handle(args []string) {
 	if len(args) > 0 {
 		switch args[0] {
 		case "init":
-			node, err := c.Init()
+			PrintLegalese(os.Stdout)
+			node, err := c.Init(&bcgo.PrintingMiningListener{os.Stdout})
 			if err != nil {
 				log.Println(err)
 				return
@@ -193,9 +194,17 @@ func PrintUsage(output io.Writer) {
 	fmt.Fprintln(output, "\tcolour list - displays all canvases")
 	fmt.Fprintln(output, "\tcolour show [hash] - display metadata of canvas with given hash")
 	fmt.Fprintln(output, "\tcolour showall [mode] - display metadata of all canvases with given mode")
+	// TODO fmt.Fprintln(output, "\tcolour render [hash] - displays a rendering of the canvas with given hash")
 	fmt.Fprintln(output)
-	fmt.Fprintln(output, "\tcolour purchase [canvas] [location] [colour] [price] - posts a new record to Aletheia Ware's Purchasing Market")
-	fmt.Fprintln(output, "\tcolour vote [canvas] [location] [colour] - posts a new record to Aletheia Ware's Voting Platform")
+	fmt.Fprintln(output, "\tcolour purchase [canvas] [location] [colour] [price] - creates a new purchase on the given canvas at the given location for the given colour with the given price")
+	fmt.Fprintln(output, "\tcolour vote [canvas] [location] [colour] - creates a new vote on the given canvas at the given location for the given colour")
+}
+
+func PrintLegalese(output io.Writer) {
+	fmt.Fprintln(output, "Colour Legalese:")
+	fmt.Fprintln(output, "Colour is made available by Aletheia Ware LLC [https://aletheiaware.com] under the Terms of Service [https://aletheiaware.com/terms-of-service.html] and Privacy Policy [https://aletheiaware.com/privacy-policy.html].")
+	fmt.Fprintln(output, "This beta version of Colour is made available under the Beta Test Agreement [https://aletheiaware.com/colour-beta-test-agreement.html].")
+	fmt.Fprintln(output, "By continuing to use this software you agree to the Terms of Service, Privacy Policy, and Beta Test Agreement.")
 }
 
 func main() {
