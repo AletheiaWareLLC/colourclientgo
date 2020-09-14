@@ -60,7 +60,7 @@ func main() {
 				return
 			}
 		case "list":
-			node, err := bcgo.GetNode(client.Root, client.Cache, client.Network)
+			node, err := client.GetNode()
 			if err != nil {
 				log.Println(err)
 				return
@@ -77,7 +77,7 @@ func main() {
 			log.Println(count, "canvases")
 		case "show":
 			if len(args) > 1 {
-				node, err := bcgo.GetNode(client.Root, client.Cache, client.Network)
+				node, err := client.GetNode()
 				if err != nil {
 					log.Println(err)
 					return
@@ -98,7 +98,7 @@ func main() {
 			}
 		case "showall":
 			if len(args) > 1 {
-				node, err := bcgo.GetNode(client.Root, client.Cache, client.Network)
+				node, err := client.GetNode()
 				if err != nil {
 					log.Println(err)
 					return

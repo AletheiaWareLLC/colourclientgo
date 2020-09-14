@@ -20,7 +20,6 @@ import (
 	"github.com/AletheiaWareLLC/bcclientgo"
 	"github.com/AletheiaWareLLC/bcgo"
 	"github.com/AletheiaWareLLC/colourgo"
-	"log"
 )
 
 type CanvasCallback func(entry *bcgo.BlockEntry, canvas *colourgo.Canvas) error
@@ -29,42 +28,40 @@ type Client struct {
 	bcclientgo.BCClient
 }
 
+func (c *Client) Init(listener bcgo.MiningListener) (*bcgo.Node, error) {
+	// Add Colour host to peers
+	if err := bcgo.AddPeer(c.Root, colourgo.GetColourHost()); err != nil {
+		return nil, err
+	}
+
+	// Add BC host to peers
+	if err := bcgo.AddPeer(c.Root, bcgo.GetBCHost()); err != nil {
+		return nil, err
+	}
+
+	return c.BCClient.Init(listener)
+}
+
 func (c *Client) List(node *bcgo.Node, callback CanvasCallback) error {
-	canvases := colourgo.OpenCanvasChannel()
-	if err := canvases.LoadHead(c.Cache, c.Network); err != nil {
-		log.Println(err)
-	}
-	if err := canvases.Pull(c.Cache, c.Network); err != nil {
-		log.Println(err)
-	}
+	name := colourgo.GetCanvasChannelName()
+	canvases := node.GetOrOpenChannel(name, colourgo.OpenCanvasChannel)
 	return colourgo.GetCanvas(canvases, c.Cache, c.Network, node.Alias, node.Key, nil, func(entry *bcgo.BlockEntry, key []byte, canvas *colourgo.Canvas) error {
 		return callback(entry, canvas)
 	})
 }
 
 func (c *Client) Show(node *bcgo.Node, recordHash []byte, callback CanvasCallback) error {
-	canvases := colourgo.OpenCanvasChannel()
-	if err := canvases.LoadHead(c.Cache, c.Network); err != nil {
-		log.Println(err)
-	}
-	if err := canvases.Pull(c.Cache, c.Network); err != nil {
-		log.Println(err)
-	}
+	name := colourgo.GetCanvasChannelName()
+	canvases := node.GetOrOpenChannel(name, colourgo.OpenCanvasChannel)
 	return colourgo.GetCanvas(canvases, c.Cache, c.Network, node.Alias, node.Key, recordHash, func(entry *bcgo.BlockEntry, key []byte, canvas *colourgo.Canvas) error {
 		return callback(entry, canvas)
 	})
 }
 
 func (c *Client) ShowAll(node *bcgo.Node, mode string, callback CanvasCallback) error {
-	canvases := colourgo.OpenCanvasChannel()
-	if err := canvases.LoadHead(c.Cache, c.Network); err != nil {
-		log.Println(err)
-	}
-	if err := canvases.Pull(c.Cache, c.Network); err != nil {
-		log.Println(err)
-	}
+	name := colourgo.GetCanvasChannelName()
+	canvases := node.GetOrOpenChannel(name, colourgo.OpenCanvasChannel)
 	return colourgo.GetCanvas(canvases, c.Cache, c.Network, node.Alias, node.Key, nil, func(entry *bcgo.BlockEntry, key []byte, canvas *colourgo.Canvas) error {
-		// TODO check this comparison works
 		if canvas.Mode.String() == mode {
 			return callback(entry, canvas)
 		}
