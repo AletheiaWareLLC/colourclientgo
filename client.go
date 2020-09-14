@@ -24,11 +24,11 @@ import (
 
 type CanvasCallback func(entry *bcgo.BlockEntry, canvas *colourgo.Canvas) error
 
-type Client struct {
+type ColourClient struct {
 	bcclientgo.BCClient
 }
 
-func (c *Client) Init(listener bcgo.MiningListener) (*bcgo.Node, error) {
+func (c *ColourClient) Init(listener bcgo.MiningListener) (*bcgo.Node, error) {
 	// Add Colour host to peers
 	if err := bcgo.AddPeer(c.Root, colourgo.GetColourHost()); err != nil {
 		return nil, err
@@ -42,7 +42,7 @@ func (c *Client) Init(listener bcgo.MiningListener) (*bcgo.Node, error) {
 	return c.BCClient.Init(listener)
 }
 
-func (c *Client) List(node *bcgo.Node, callback CanvasCallback) error {
+func (c *ColourClient) List(node *bcgo.Node, callback CanvasCallback) error {
 	name := colourgo.GetCanvasChannelName()
 	canvases := node.GetOrOpenChannel(name, colourgo.OpenCanvasChannel)
 	return colourgo.GetCanvas(canvases, c.Cache, c.Network, node.Alias, node.Key, nil, func(entry *bcgo.BlockEntry, key []byte, canvas *colourgo.Canvas) error {
@@ -50,7 +50,7 @@ func (c *Client) List(node *bcgo.Node, callback CanvasCallback) error {
 	})
 }
 
-func (c *Client) Show(node *bcgo.Node, recordHash []byte, callback CanvasCallback) error {
+func (c *ColourClient) Show(node *bcgo.Node, recordHash []byte, callback CanvasCallback) error {
 	name := colourgo.GetCanvasChannelName()
 	canvases := node.GetOrOpenChannel(name, colourgo.OpenCanvasChannel)
 	return colourgo.GetCanvas(canvases, c.Cache, c.Network, node.Alias, node.Key, recordHash, func(entry *bcgo.BlockEntry, key []byte, canvas *colourgo.Canvas) error {
@@ -58,7 +58,7 @@ func (c *Client) Show(node *bcgo.Node, recordHash []byte, callback CanvasCallbac
 	})
 }
 
-func (c *Client) ShowAll(node *bcgo.Node, mode string, callback CanvasCallback) error {
+func (c *ColourClient) ShowAll(node *bcgo.Node, mode string, callback CanvasCallback) error {
 	name := colourgo.GetCanvasChannelName()
 	canvases := node.GetOrOpenChannel(name, colourgo.OpenCanvasChannel)
 	return colourgo.GetCanvas(canvases, c.Cache, c.Network, node.Alias, node.Key, nil, func(entry *bcgo.BlockEntry, key []byte, canvas *colourgo.Canvas) error {

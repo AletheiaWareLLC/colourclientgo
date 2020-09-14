@@ -38,7 +38,7 @@ func main() {
 	// Set log flags
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
-	client := &colourclientgo.Client{
+	client := &colourclientgo.ColourClient{
 		BCClient: bcclientgo.BCClient{},
 	}
 	client.SetPeers(bcgo.SplitRemoveEmpty(*peer, ",")...)
