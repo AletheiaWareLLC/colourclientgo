@@ -28,6 +28,19 @@ type ColourClient struct {
 	bcclientgo.BCClient
 }
 
+func NewColourClient(peers ...string) *ColourClient {
+	if len(peers) == 0 {
+		peers = append(
+			peers,
+			colourgo.GetColourHost(), // Add Colour host as peer
+			bcgo.GetBCHost(),         // Add BC host as peer
+		)
+	}
+	return &ColourClient{
+		BCClient: *bcclientgo.NewBCClient(peers...),
+	}
+}
+
 func (c *ColourClient) Init(listener bcgo.MiningListener) (*bcgo.Node, error) {
 	// Add Colour host to peers
 	if err := bcgo.AddPeer(c.Root, colourgo.GetColourHost()); err != nil {
